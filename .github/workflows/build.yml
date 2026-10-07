@@ -1,0 +1,41 @@
+name: Test & build macOS server
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install
+        run: uv sync --locked --python 3.12 --extra dev
+      - name: Unit & integration tests
+        run: uv run --locked --python 3.12 --extra dev pytest -q
+
+  macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Build standalone executable
+        run: scripts/build_macos_app.sh
+      - name: Smoke test the executable
+        run: |
+          dist/PolyCopy/PolyCopy --demo --no-browser --port 8790 --data-dir "$RUNNER_TEMP/polycopy" &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8790/api/state > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8790/api/state
+          curl -sf http://127.0.0.1:8790/ | grep -q PolyCopy
+          curl -sf -X POST http://127.0.0.1:8790/api/shutdown
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PolyCopy-macos-arm64
+          path: dist/PolyCopy-macos.zip
+          retention-days: 30

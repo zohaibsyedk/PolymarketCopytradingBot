@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PolyCopy Terminal</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233987e5'/%3E%3Cpath d='M9 22V10h7a4 4 0 010 8h-4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">P</span>
+      <span class="brand-name">PolyCopy</span>
+      <span id="demo-badge" class="badge badge-demo hidden">DEMO</span>
+    </div>
+    <div class="status-group">
+      <span id="status-pill" class="pill">Stopped</span>
+      <span id="mode-pill" class="pill pill-mode">Paper</span>
+      <span id="stream-pill" class="pill pill-quiet" title="Leader trade detection">Feed: off</span>
+    </div>
+    <div class="controls">
+      <button id="btn-start" class="btn btn-primary">Start</button>
+      <button id="btn-pause" class="btn">Pause</button>
+      <button id="btn-stop" class="btn">Stop</button>
+      <span class="divider"></span>
+      <button id="wallet-chip" class="btn btn-ghost">Connect wallet</button>
+      <button id="theme-toggle" class="btn btn-ghost icon" title="Toggle light/dark theme" aria-label="Toggle theme"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
+    </div>
+  </header>
+
+  <div id="banners"></div>
+
+  <div class="layout">
+    <nav class="sidenav" id="nav">
+      <a data-tab="dashboard" class="active">Dashboard</a>
+      <a data-tab="positions">Positions</a>
+      <a data-tab="orders">Trades</a>
+      <a data-tab="signals">Signals</a>
+      <a data-tab="traders">Traders</a>
+      <a data-tab="analytics">Analytics</a>
+      <a data-tab="settings">Settings</a>
+      <a data-tab="logs">Logs</a>
+      <a data-tab="help">Help</a>
+      <div class="nav-foot" id="nav-foot"></div>
+    </nav>
+
+    <main id="main">
+      <!-- DASHBOARD -->
+      <section id="tab-dashboard" class="tab active">
+        <div class="hero-row">
+          <div class="hero card">
+            <div class="label">Equity <span id="hero-mode" class="muted"></span></div>
+            <div class="hero-value" id="hero-equity">$0.00</div>
+            <div class="hero-sub"><span id="hero-pnl" class="delta">$0.00</span> <span class="muted">total P&amp;L</span>
+              &nbsp;·&nbsp; <span id="hero-day" class="delta">$0.00</span> <span class="muted">today</span></div>
+          </div>
+          <div class="tiles" id="tiles"></div>
+        </div>
+        <div id="discovery-card" class="card discovery hidden">
+          <div class="row-between">
+            <div><strong>Finding traders to copy</strong> <span class="muted" id="discovery-phase"></span></div>
+            <div class="muted" id="discovery-count"></div>
+          </div>
+          <div class="meter"><div class="meter-fill" id="discovery-fill"></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card chart-card">
+            <div class="card-head">
+              <h3>Equity</h3>
+              <div class="seg" id="equity-range">
+                <button data-days="1">1D</button><button data-days="7">7D</button>
+                <button data-days="30" class="active">30D</button><button data-days="0">All</button>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="chart-equity"></canvas></div>
+            <div class="empty-note hidden" id="equity-empty">The equity curve fills in as the bot runs (a point every 5 minutes).</div>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head"><h3>Daily realized P&amp;L</h3><span class="muted small">UTC days</span></div>
+            <div class="chart-box"><canvas id="chart-daily"></canvas></div>
+            <div class="empty-note hidden" id="daily-empty">No closed positions yet.</div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Open positions</h3><a class="link" data-goto="positions">View all</a></div>
+            <div class="table-wrap"><table class="table" id="dash-positions"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Live activity</h3><a class="link" data-goto="signals">All signals</a></div>
+            <ul class="feed" id="dash-feed"></ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Leaders being copied</h3><a class="link" data-goto="traders">Manage</a></div>
+          <div class="leader-strip" id="dash-leaders"></div>
+        </div>
+      </section>
+
+      <!-- POSITIONS -->
+      <section id="tab-positions" class="tab">
+        <div class="toolbar">
+          <div class="seg" id="pos-filter">
+            <button data-status="open" class="active">Open</button>
+            <button data-status="closed">Closed</button>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-danger" id="btn-close-all">Close all open positions</button>
+        </div>
+        <div class="card"><div class="table-wrap"><table class="table" id="positions-table"></table></div></div>
+      </section>
+
+      <!-- ORDERS -->
+      <section id="tab-orders" class="tab">
+        <div class="toolbar"><span class="muted">Every order PolyCopy placed, with fill price, fees and slippage versus the leader.</span></div>
+        <div class="card"><div class="table-wrap"><table class="table" id="orders-table"></table></div></div>
+      </section>
+
+      <!-- SIGNALS -->
+      <section id="tab-signals" class="tab">
+        <div class="toolbar">
+          <div class="seg" id="signal-filter">
+            <button data-decision="" class="active">All</button>
+            <button data-decision="copied">Copied</button>
+            <button data-decision="exited">Exits</button>
+            <button data-decision="skipped">Skipped</button>
+            <button data-decision="failed">Failed</button>
+          </div>
+          <span class="muted small">A signal is a leader trade PolyCopy detected. Skipped signals show exactly why.</span>
+        </div>
+        <div class="card"><div class="table-wrap"><table class="table" id="signals-table"></table></div></div>
+      </section>
+
+      <!-- TRADERS -->
+      <section id="tab-traders" class="tab">
+        <div class="toolbar">
+          <div class="seg" id="trader-filter">
+            <button data-status="" class="active">All scored</button>
+            <button data-status="followed">Following</button>
+            <button data-status="candidate">Candidates</button>
+            <button data-status="benched">Benched</button>
+            <button data-status="blocked">Blocked</button>
+          </div>
+          <div class="spacer"></div>
+          <input id="add-trader" class="input" placeholder="0x… wallet to follow manually" maxlength="42">
+          <button class="btn" id="btn-add-trader">Follow</button>
+          <button class="btn btn-primary" id="btn-discovery">Re-scan leaderboards</button>
+        </div>
+        <div class="card"><div class="table-wrap"><table class="table" id="traders-table"></table></div></div>
+      </section>
+
+      <!-- ANALYTICS -->
+      <section id="tab-analytics" class="tab">
+        <div class="tiles tiles-wide" id="analytics-tiles"></div>
+        <div class="grid-2">
+          <div class="card chart-card"><div class="card-head"><h3>P&amp;L by leader</h3></div><div class="chart-box tall"><canvas id="chart-leaders"></canvas></div></div>
+          <div class="card chart-card"><div class="card-head"><h3>P&amp;L by category</h3></div><div class="chart-box tall"><canvas id="chart-categories"></canvas></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card chart-card"><div class="card-head"><h3>Win rate by entry price</h3><span class="muted small">bars: closed positions</span></div><div class="chart-box"><canvas id="chart-buckets"></canvas></div></div>
+          <div class="card chart-card"><div class="card-head"><h3>Entry slippage vs leader</h3><span class="muted small">cents paid above the leader's price</span></div><div class="chart-box"><canvas id="chart-slippage"></canvas></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>Why signals were skipped</h3></div><div class="table-wrap"><table class="table" id="skip-table"></table></div></div>
+          <div class="card"><div class="card-head"><h3>Leader scorecard (live copies)</h3></div><div class="table-wrap"><table class="table" id="leader-score-table"></table></div></div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="tab-settings" class="tab">
+        <div class="card">
+          <div class="card-head"><h3>Trading mode</h3></div>
+          <div class="mode-row">
+            <label class="radio-card" id="mode-paper-card"><input type="radio" name="mode" value="paper"><div><strong>Paper</strong><p class="muted">Simulated fills against the real order book. No money moves.</p></div></label>
+            <label class="radio-card" id="mode-live-card"><input type="radio" name="mode" value="live"><div><strong>Live</strong><p class="muted">Real orders from your Polymarket wallet.</p></div></label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Risk profile</h3><span class="muted small">Presets fill in the risk limits below</span></div>
+          <div class="profile-row" id="profile-row"></div>
+        </div>
+        <form id="settings-form"></form>
+        <div class="sticky-save"><span class="muted" id="settings-status"></span><button class="btn" id="btn-settings-reset">Restore defaults</button><button class="btn btn-primary" id="btn-settings-save">Save settings</button></div>
+        <div class="card">
+          <div class="card-head"><h3>Paper account</h3></div>
+          <div class="row"><input class="input" id="paper-balance" type="number" min="10" step="10" value="1000"><button class="btn" id="btn-paper-reset">Reset paper account</button><span class="muted small">Clears paper positions and history. Stop the bot first.</span></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Account</h3></div>
+          <div id="account-box"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Server</h3></div>
+          <div class="row"><button class="btn btn-danger" id="btn-quit">Quit PolyCopy server</button><span class="muted small">Stops trading and closes the server window. Open positions stay in your wallet; start PolyCopy again to resume managing them.</span></div>
+        </div>
+      </section>
+
+      <!-- LOGS -->
+      <section id="tab-logs" class="tab">
+        <div class="toolbar">
+          <div class="seg" id="log-filter">
+            <button data-level="" class="active">All</button>
+            <button data-level="info">Info</button>
+            <button data-level="warning">Warnings</button>
+            <button data-level="error">Errors</button>
+          </div>
+        </div>
+        <div class="card"><div class="table-wrap"><table class="table mono-table" id="logs-table"></table></div></div>
+      </section>
+
+      <!-- HELP -->
+      <section id="tab-help" class="tab">
+        <div class="card prose" id="help-content"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Trader drawer -->
+  <aside id="drawer" class="drawer hidden" aria-hidden="true">
+    <div class="drawer-head"><h3 id="drawer-title">Trader</h3><button class="btn btn-ghost" id="drawer-close">✕</button></div>
+    <div id="drawer-body"></div>
+  </aside>
+
+  <!-- Setup wizard -->
+  <div id="wizard" class="modal hidden">
+    <div class="modal-card">
+      <div class="wizard-steps"><span data-step="1" class="active">1 · Connect</span><span data-step="2">2 · Risk</span><span data-step="3">3 · Start</span></div>
+      <div class="wizard-page" data-page="1">
+        <h2>Connect your Polymarket account</h2>
+        <p class="muted">PolyCopy signs orders on this Mac with your account's private key. The key is stored in your macOS Keychain and is only ever sent to Polymarket as signatures — never as the key itself.</p>
+        <label class="field"><span>Private key</span>
+          <input id="wz-key" class="input" type="password" autocomplete="off" spellcheck="false" placeholder="0x… (64 hex characters)">
+          <small class="muted">Polymarket → Settings → Export private key (email/Google accounts open Magic's reveal page), or export it from the browser wallet you signed up with.</small>
+        </label>
+        <label class="field"><span>Polymarket wallet address</span>
+          <div class="row"><input id="wz-wallet" class="input" spellcheck="false" placeholder="0x… (shown on your Polymarket profile / deposit screen)"><button class="btn" id="wz-detect">Detect</button></div>
+          <small class="muted">The address that holds your USDC on Polymarket. "Detect" derives the candidates from your key and picks the one with activity.</small>
+        </label>
+        <div id="wz-candidates"></div>
+        <label class="check"><input type="checkbox" id="wz-remember" checked> Remember me on this Mac (log in automatically next time)</label>
+        <div class="wizard-error hidden" id="wz-error"></div>
+        <div class="wizard-actions">
+          <button class="btn btn-ghost" id="wz-skip">Skip — paper trade without a wallet</button>
+          <button class="btn btn-primary" id="wz-login">Log in</button>
+        </div>
+      </div>
+      <div class="wizard-page hidden" data-page="2">
+        <h2>How much risk?</h2>
+        <p class="muted">You can change any of this later in Settings.</p>
+        <div class="profile-row" id="wz-profiles"></div>
+        <div class="field">
+          <span>Bankroll the bot may use</span>
+          <div class="row">
+            <label class="check"><input type="radio" name="wz-bankroll" value="balance" checked> My whole Polymarket balance</label>
+            <label class="check"><input type="radio" name="wz-bankroll" value="fixed"> Only <input id="wz-fixed" class="input input-sm" type="number" min="10" value="500"> USDC</label>
+          </div>
+        </div>
+        <div class="wizard-actions"><button class="btn btn-ghost" data-back="1">Back</button><button class="btn btn-primary" data-next="3">Continue</button></div>
+      </div>
+      <div class="wizard-page hidden" data-page="3">
+        <h2>Paper first, or live?</h2>
+        <div class="mode-row">
+          <label class="radio-card"><input type="radio" name="wz-mode" value="paper" checked><div><strong>Paper trading (recommended for the first days)</strong><p class="muted">Copies leaders against the real order book with simulated money so you can verify results before risking funds.</p></div></label>
+          <label class="radio-card" id="wz-live-card"><input type="radio" name="wz-mode" value="live"><div><strong>Live trading</strong><p class="muted">Places real orders with your wallet's USDC.</p></div></label>
+        </div>
+        <label class="check hidden" id="wz-ack-row"><input type="checkbox" id="wz-ack"> I understand prediction-market trading can lose money, that past performance of copied traders does not guarantee future results, and that I am allowed to use Polymarket where I live.</label>
+        <div class="wizard-error hidden" id="wz-error3"></div>
+        <div class="wizard-actions"><button class="btn btn-ghost" data-back="2">Back</button><button class="btn btn-primary" id="wz-start">Start the bot</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
