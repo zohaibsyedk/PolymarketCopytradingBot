@@ -562,6 +562,8 @@ Polymarket's location endpoint when you log in and every few hours:
 | Symptom | What to do |
 |---|---|
 | macOS: *"cannot be opened because the developer cannot be verified"* | Right-click the file → **Open** → **Open**. Or run `xattr -dr com.apple.quarantine <folder>` once. |
+| Double-clicking the launcher opens a text editor or says *"permission denied"* | The unzip tool dropped the executable flag. In Terminal: `cd` into the PolyCopy folder and run `chmod +x *.command scripts/*.sh`, then double-click again. |
+| macOS asks whether *python* / *PolyCopy* may access the Keychain item "PolyCopy" | That is PolyCopy reading your stored key. Enter your Mac password and choose **Always Allow**. It can ask again after an update, because the program on disk changed. |
 | Browser didn't open | Go to `http://127.0.0.1:8765` (or the address printed in the Terminal window). |
 | *"Port 8765 is busy"* | Another program uses it. PolyCopy picks the next free port automatically and prints the address. If PolyCopy is already running, the launcher opens the existing one. |
 | Login: *"wallet address is required"* | Paste your Polymarket address or press **Detect**. |
